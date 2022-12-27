@@ -1,4 +1,6 @@
 
+print("\x1b[4;31mWhat Text Looks Like Without Proper Imports\x1b[0m")
+
 # Default Modules
 import datetime,time,os,sys,unittest
 
@@ -61,12 +63,20 @@ elif((OS_TYPE == 'windows')):
 #print("\x1b[38;2;93mhello world\x1b[0m")
 #print("\x1b[38;3;93mhello world\x1b[0m")
 #print("\x1b[38;4;93mhello world\x1b[0m")
-print("\x1b[38;5;93mhello world\x1b[0m")
+    
+###print("\x1b[38;5;93mhello world\x1b[0m")
+    
 #print("\x1b[38;6;93mhello world\x1b[0m")
 #print("\x1b[38;7;93mhello world\x1b[0m")
 #print("\x1b[38;8;93mhello world\x1b[0m")
 #print("\x1b[38;9;93mhello world\x1b[0m")
 
+print("\x1b[38;5;15mNormal\x1b[0m",end="")
+print("\t\t",end="")
+raw_string = "\x1b[38;5;15m\x1b[0m"
+for char in raw_string:
+    print(char,end="")
+print("")
 for value in range(0,256):
 	if(value < 10):
 		out_string = "  " + str(value)
@@ -91,31 +101,53 @@ for value in range(0,256):
 		print("")
 
 print("")
-
-for value in range(0,256):
-	if(value < 10):
-		out_string = "  " + str(value)
-	elif(value < 100):
-		out_string = " " + str(value)
-	else:
-		out_string = str(value)
-	print("\x1b[138;5;"+str(value)+"m"+out_string +"\x1b[0m",end=" ")
-	if(value == 15):
-		print("")
-	if(value == 51):
-		print("")
-	if(value == 87):
-		print("")
-	if(value == 123):
-		print("")
-	if(value == 159):
-		print("")
-	if(value == 195):
-		print("")
-	if(value == 231):
-		print("")
-
 print("")
+
+print("\x1b[138;5;4m  4\x1b[0m",end=" ")
+print("\x1b[138;5;7m  7\x1b[0m",end=" ")
+print("\x1b[138;5;41m 41\x1b[0m",end=" ")
+print("\x1b[138;5;42m 42\x1b[0m",end=" ")
+print("\x1b[138;5;43m 43\x1b[0m",end=" ")
+print("\x1b[138;5;44m 44\x1b[0m",end=" ")
+print("\x1b[138;5;45m 45\x1b[0m",end=" ")
+print("\x1b[138;5;46m 46\x1b[0m",end=" ")
+print("\x1b[138;5;47m 47\x1b[0m",end=" ")
+print("\x1b[138;5;100m100\x1b[0m",end=" ")
+print("\x1b[138;5;101m101\x1b[0m",end=" ")
+print("\x1b[138;5;102m102\x1b[0m",end=" ")
+print("\x1b[138;5;103m103\x1b[0m",end=" ")
+print("\x1b[138;5;104m104\x1b[0m",end=" ")
+print("\x1b[138;5;105m105\x1b[0m",end=" ")
+print("\x1b[138;5;106m106\x1b[0m",end=" ")
+print("\x1b[138;5;107m107\x1b[0m",end=" ")
+print("")
+print("")
+
+##for value in range(0,256):
+##	if(value < 10):
+##		out_string = "  " + str(value)
+##	elif(value < 100):
+##		out_string = " " + str(value)
+##	else:
+##		out_string = str(value)
+##	print("\x1b[138;5;"+str(value)+"m"+out_string +"\x1b[0m",end=" ")
+##	if(value == 15):
+##		print("")
+##	if(value == 51):
+##		print("")
+##	if(value == 87):
+##		print("")
+##	if(value == 123):
+##		print("")
+##	if(value == 159):
+##		print("")
+##	if(value == 195):
+##		print("")
+##	if(value == 231):
+##		print("")
+##
+##print("")
+##print("")
 
 for value in range(0,256):
 	if(value < 10):
@@ -140,6 +172,7 @@ for value in range(0,256):
 	if(value == 231):
 		print("")
 
+print("")
 print("")
 
 for value in range(0,256):
@@ -166,30 +199,29 @@ for value in range(0,256):
 		print("")
 
 print("")
-
-for value in range(0,256):
-	if(value < 10):
-		out_string = "  " + str(value)
-	elif(value < 100):
-		out_string = " " + str(value)
-	else:
-		out_string = str(value)
-	print("\x1b[8;38;5;"+str(value)+"m"+out_string +"\x1b[0m",end=" ")
-	if(value == 15):
-		print("")
-	if(value == 51):
-		print("")
-	if(value == 87):
-		print("")
-	if(value == 123):
-		print("")
-	if(value == 159):
-		print("")
-	if(value == 195):
-		print("")
-	if(value == 231):
-		print("")
 print("")
 
-print("\x1b[4;31mfail\x1b[0m")
-print("\x1b[4;38;5;93mfail\x1b[0m")
+##for value in range(0,256):
+##	if(value < 10):
+##		out_string = "  " + str(value)
+##	elif(value < 100):
+##		out_string = " " + str(value)
+##	else:
+##		out_string = str(value)
+##	print("\x1b[8;38;5;"+str(value)+"m"+out_string +"\x1b[0m",end=" ")
+##	if(value == 15):
+##		print("")
+##	if(value == 51):
+##		print("")
+##	if(value == 87):
+##		print("")
+##	if(value == 123):
+##		print("")
+##	if(value == 159):
+##		print("")
+##	if(value == 195):
+##		print("")
+##	if(value == 231):
+##		print("")
+##print("")
+##print("")
