@@ -99,6 +99,16 @@ class ColoredText:
         self.color_name_to_code['orange'] = '38;5;214m'
         self.color_name_to_code['light_purple'] = '38;5;135m'
         self.color_name_to_code['dark_purple'] = '38;5;93m'
+
+        self.color_name_to_code['bright_blue'] = '38;5;21m'
+        self.color_name_to_code['bright_green'] = '38;5;46m'
+        self.color_name_to_code['bright_red'] = '38;5;196m'
+        self.color_name_to_code['bright_yellow'] = '38;5;226m'
+        self.color_name_to_code['bright_purple'] = '38;5;93m'
+        self.color_name_to_code['bright_orange'] = '38;5;202m'
+        self.color_name_to_code['bright_white'] = '38;5;15m'
+        self.color_name_to_code['bright_pink'] = '38;5;201m'
+        
         self.color_code_to_name['30m'] = 'black'
         self.color_code_to_name['31m'] = 'red'
         self.color_code_to_name['32m'] = 'green'
@@ -202,3 +212,71 @@ class ColoredText:
         else:
             return ans
 
+    def print_all_foreground_colors(self):
+        if((OS_TYPE == 'windows')):
+            # Clear Screen Windows
+            os.system('cls')
+        elif((OS_TYPE == 'linux') or (OS_TYPE == 'macintosh')):
+            # Clear Screen Linux / Mac
+            os.system('clear')
+        for value in range(0,256):
+            if(value < 10):
+                    out_string = "  " + str(value)
+            elif(value < 100):
+                    out_string = " " + str(value)
+            else:
+                    out_string = str(value)
+            print("\x1b[38;5;"+str(value)+"m"+out_string +"\x1b[0m",end=" ")
+            if(value == 15):
+                    print("")
+            if(value == 51):
+                    print("")
+            if(value == 87):
+                    print("")
+            if(value == 123):
+                    print("")
+            if(value == 159):
+                    print("")
+            if(value == 195):
+                    print("")
+            if(value == 231):
+                    print("")
+        print("")
+
+    def print_all_background_colors(self):
+        if((OS_TYPE == 'windows')):
+            # Clear Screen Windows
+            os.system('cls')
+        elif((OS_TYPE == 'linux') or (OS_TYPE == 'macintosh')):
+            # Clear Screen Linux / Mac
+            os.system('clear')
+        for value in range(0,256):
+            if(value < 10):
+                    out_string = "  " + str(value)
+            elif(value < 100):
+                    out_string = " " + str(value)
+            else:
+                    out_string = str(value)
+            print("\x1b[7;38;5;"+str(value)+"m"+out_string +"\x1b[0m",end=" ")
+            #outfile.write(str("print("+'"'+"\x1b[7;38;5;")+str(value)+"m"+out_string +str("\x1b[0m"+'"'+")")+"\n")
+            if(value == 15):
+                    print("")
+            if(value == 51):
+                    print("")
+            if(value == 87):
+                    print("")
+            if(value == 123):
+                    print("")
+            if(value == 159):
+                    print("")
+            if(value == 195):
+                    print("")
+            if(value == 231):
+                    print("")
+        print("")
+
+    def print_all_named_colors(self):
+        my_keys = sorted(list(self.color_name_to_code.keys()))
+
+        for key in my_keys:
+            print(self.cc(key,key,'normal'))

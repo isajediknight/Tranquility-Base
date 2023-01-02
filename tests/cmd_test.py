@@ -59,4 +59,10 @@ elif((OS_TYPE == 'windows')):
     sys.path.insert(0,'..\\classes\\')
     sys.path.insert(0,MODULES_DIR)
 
+from custom_colors import *
+
 print(" Hello World")
+
+cc = ColoredText()
+
+cc.print_all_named_colors()
