@@ -60,8 +60,13 @@ elif((OS_TYPE == 'linux') or (OS_TYPE == 'macintosh')):
 # OS Compatibility for importing Class Files
 if((OS_TYPE == 'linux')):
     sys.path.insert(0,'../classes/')
+    sys.path.insert(0,'../modules/')
 elif((OS_TYPE == 'windows')):
     sys.path.insert(0,'..\\classes\\')
+    sys.path.insert(0,'..\\modules\\')
+
+from constants import *
+import solana
 
 #print("\x1b[38;0;93mhello world\x1b[0m")
 #print("\x1b[38;1;93mhello world\x1b[0m")
@@ -619,15 +624,88 @@ print("\x1b[7;38;5;232m232\x1b[0m")
 
 print("\x1b[7;38;5;16m 16\x1b[0m")
 
+print("\x1b[7;38;5;226m226\x1b[0m")
+#print("\x1b[38;2;213;117;37mwhut\x1b[0m")
 
-print("\x1b[38;2;213;117;37mwhut\x1b[0m")
+#print("\x1b[0;38;2;50;198;252mBaby Blue\x1b[0m")
+#print("\x1b[0;38;2;68;206;68mMiddle Green\x1b[0m")
+#print("\x1b[0;38;2;255;153;51mOrange\x1b[0m")
+print("\x1b[0;38;2;0;255;255mJames Favorite Color\x1b[0m" + " test " + "\x1b[0;38;2;67;114;245mNora's Favorite Color\x1b[0m")
+print("\x1b[0;38;2;255;144;249mRachel's Favorite Color\x1b[0m")
 
-print("\x1b[0;38;2;50;198;252mBaby Blue\x1b[0m")
-print("\x1b[0;38;2;68;206;68mMiddle Green\x1b[0m")
-print("\x1b[0;38;2;255;153;51mOrange\x1b[0m")
-print("\x1b[0;38;2;0;255;255mJames Favorite Color\x1b[0m")
+print('default',end=' ')
+
+
+ans = yellow.colored('the text can') + ' ' + green.colored('be') + ' ' + red.colored('whatever is needed')
+ans += ' ' + tableau_10_blue.colored(' from constants file')
+print(ans)
+
+print("\x1b[4;38;5;226mTEST TEST\x1b[0m")
+
+
+print("\x1b[7;38;5;202m202\x1b[0m" + "\x1b[7;38;5;208m208\x1b[0m",end="")
+print("\x1b[7;38;5;214m214\x1b[0m")
+
+os.system('cls')
+
+ans = white.colored(' Tableau 10:') + ' '
+ans += tableau_10_blue.colored('blue') + ' '
+ans += tableau_10_brown.colored('brown') + ' '
+ans += tableau_10_orange.colored('orange') + ' '
+ans += tableau_10_pink.colored('pink') + ' '
+ans += tableau_10_green.colored('green') + ' '
+ans += tableau_10_grey.colored('grey') + ' '
+ans += tableau_10_red.colored('red') + ' '
+ans += tableau_10_yellow.colored('yellow') + ' '
+ans += tableau_10_purple.colored('purple') + ' '
+ans += tableau_10_teal.colored('teal') + ' '
+#ans += tableau_10_.colored('')
+print(ans)
+
+ans = white.colored(' Tableau 20:') + ' '
+ans += tableau_20_blue.colored('blue') + ' '
+ans += tableau_20_light_green.colored('blue') + ' '
+ans += tableau_20_brown.colored('blue') + ' '
+ans += tableau_20_grey.colored('blue') + ' '
+ans += tableau_20_light_blue.colored('blue') + ' '
+ans += tableau_20_red.colored('blue') + ' '
+ans += tableau_20_light_brown.colored('blue') + ' '
+ans += tableau_20_yellow.colored('blue') + ' '
+ans += tableau_20_orange.colored('blue') + ' '
+ans += tableau_20_light_red.colored('blue') + ' '
+ans += tableau_20_pink.colored('blue') + ' '
+ans += tableau_20_light_yellow.colored('blue') + ' '
+ans += tableau_20_light_orange.colored('blue') + ' '
+ans += tableau_20_purple.colored('blue') + ' '
+ans += tableau_20_light_pink.colored('blue') + ' '
+ans += tableau_20_baby_blue.colored('blue') + ' '
+ans += tableau_20_green.colored('blue') + ' '
+ans += tableau_20_light_purple.colored('blue') + ' '
+ans += tableau_20_dark_grey.colored('blue') + ' '
+ans += tableau_20_light_baby_blue.colored('blue') + ' '
+ans += tableau_20_blue.colored('blue') + ' '
+ans += tableau_20_light_green.colored('blue') + ' '
+ans += tableau_20_brown.colored('blue') + ' '
+ans += tableau_20_grey.colored('blue') + ' '
+ans += tableau_20_light_blue.colored('blue') + ' '
+ans += tableau_20_red.colored('blue') + ' '
+ans += tableau_20_light_brown.colored('blue') + ' '
+ans += tableau_20_yellow.colored('blue') + ' '
+ans += tableau_20_orange.colored('blue') + ' '
+ans += tableau_20_light_red.colored('blue') + ' '
+ans += tableau_20_pink.colored('blue') + ' '
+ans += tableau_20_light_yellow.colored('blue') + ' '
+ans += tableau_20_light_orange.colored('blue') + ' '
+ans += tableau_20_purple.colored('blue') + ' '
+ans += tableau_20_light_pink.colored('blue') + ' '
+ans += tableau_20_baby_blue.colored('blue') + ' '
+ans += tableau_20_green.colored('blue') + ' '
+ans += tableau_20_light_purple.colored('blue') + ' '
+ans += tableau_20_dark_grey.colored('blue') + ' '
+ans += tableau_20_light_baby_blue.colored('blue')
+print(ans)
+
+print("\x1b[38;2;255;255;255mEND RESET\x1b[0m")
 
 
 
-
-print("\x1b[38;2;213;117;37mEND RESET\x1b[0m")
