@@ -170,13 +170,22 @@ class ColoredText:
 
         # <-----   Textual Affects   ----->
         # Begin
-        if(text_affect in list(self.text_affects.keys())):
-            # Add the Affect
-            ans += self.text_affects[text_affect]
-        else:
-            # We have an error so flag it
-            any_errors = True
 
+        # Check to make sure that the color name passed in has been defined
+        if((color_name in list(self.color_name_to_code.keys()))):
+
+            # Necesary for RGB 16 Million color support
+            # RGB combinations are not supported for text affects
+            if(len(list(find_all(self.color_name_to_code[color_name],';'))) < 5):
+        
+                if(text_affect in list(self.text_affects.keys())):
+                    # Add the Affect
+                    ans += self.text_affects[text_affect]
+                else:
+                    # We have an error so flag it
+                    any_errors = True
+
+        if(any_errors):
             # Human Readable Error Message to be printed
             error_message = 'Text Affect '
             error_message += "\x1b[" + self.text_affects['bold'] + self.color_name_to_code['red']
@@ -212,7 +221,7 @@ class ColoredText:
         else:
             return ans
 
-    def print_all_foreground_colors(self):
+    def print_all_basic_foreground_colors(self):
         if((OS_TYPE == 'windows')):
             # Clear Screen Windows
             os.system('cls')
@@ -243,7 +252,7 @@ class ColoredText:
                     print("")
         print("")
 
-    def print_all_background_colors(self):
+    def print_all_basic_background_colors(self):
         if((OS_TYPE == 'windows')):
             # Clear Screen Windows
             os.system('cls')
@@ -280,3 +289,5 @@ class ColoredText:
 
         for key in my_keys:
             print(self.cc(key,key,'normal'))
+
+
