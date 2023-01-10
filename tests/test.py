@@ -66,7 +66,6 @@ elif((OS_TYPE == 'windows')):
     sys.path.insert(0,'..\\modules\\')
 
 from constants import *
-import solana
 
 #print("\x1b[38;0;93mhello world\x1b[0m")
 #print("\x1b[38;1;93mhello world\x1b[0m")
@@ -662,50 +661,102 @@ ans += tableau_10_teal.colored('teal') + ' '
 #ans += tableau_10_.colored('')
 print(ans)
 
+#https://public.tableau.com/views/TableauColors/ColorPaletteswithRGBValues?%3Aembed=y&%3AshowVizHome=no&%3Adisplay_count=y&%3Adisplay_static_image=y
 ans = white.colored(' Tableau 20:') + ' '
-ans += tableau_20_blue.colored('blue') + ' '
-ans += tableau_20_light_green.colored('blue') + ' '
-ans += tableau_20_brown.colored('blue') + ' '
-ans += tableau_20_grey.colored('blue') + ' '
-ans += tableau_20_light_blue.colored('blue') + ' '
-ans += tableau_20_red.colored('blue') + ' '
-ans += tableau_20_light_brown.colored('blue') + ' '
-ans += tableau_20_yellow.colored('blue') + ' '
-ans += tableau_20_orange.colored('blue') + ' '
-ans += tableau_20_light_red.colored('blue') + ' '
-ans += tableau_20_pink.colored('blue') + ' '
-ans += tableau_20_light_yellow.colored('blue') + ' '
-ans += tableau_20_light_orange.colored('blue') + ' '
-ans += tableau_20_purple.colored('blue') + ' '
-ans += tableau_20_light_pink.colored('blue') + ' '
-ans += tableau_20_baby_blue.colored('blue') + ' '
-ans += tableau_20_green.colored('blue') + ' '
-ans += tableau_20_light_purple.colored('blue') + ' '
-ans += tableau_20_dark_grey.colored('blue') + ' '
-ans += tableau_20_light_baby_blue.colored('blue') + ' '
-ans += tableau_20_blue.colored('blue') + ' '
-ans += tableau_20_light_green.colored('blue') + ' '
-ans += tableau_20_brown.colored('blue') + ' '
-ans += tableau_20_grey.colored('blue') + ' '
-ans += tableau_20_light_blue.colored('blue') + ' '
-ans += tableau_20_red.colored('blue') + ' '
-ans += tableau_20_light_brown.colored('blue') + ' '
-ans += tableau_20_yellow.colored('blue') + ' '
-ans += tableau_20_orange.colored('blue') + ' '
-ans += tableau_20_light_red.colored('blue') + ' '
-ans += tableau_20_pink.colored('blue') + ' '
-ans += tableau_20_light_yellow.colored('blue') + ' '
-ans += tableau_20_light_orange.colored('blue') + ' '
-ans += tableau_20_purple.colored('blue') + ' '
-ans += tableau_20_light_pink.colored('blue') + ' '
-ans += tableau_20_baby_blue.colored('blue') + ' '
-ans += tableau_20_green.colored('blue') + ' '
-ans += tableau_20_light_purple.colored('blue') + ' '
-ans += tableau_20_dark_grey.colored('blue') + ' '
-ans += tableau_20_light_baby_blue.colored('blue')
+ans += tableau_20_blue.colored(tableau_20_blue.get_name().replace('Tableau 20 ','')) + ' '
+ans += tableau_20_light_green.colored(tableau_20_light_green.get_name().replace('Tableau 20 ','')) + ' '
+ans += tableau_20_brown.colored(tableau_20_brown.get_name().replace('Tableau 20 ','')) + ' '
+ans += tableau_20_grey.colored(tableau_20_grey.get_name().replace('Tableau 20 ','')) + ' '
+ans += tableau_20_light_blue.colored(tableau_20_light_blue.get_name().replace('Tableau 20 ','')) + ' '
+ans += tableau_20_red.colored(tableau_20_red.get_name().replace('Tableau 20 ','')) + ' '
+ans += tableau_20_light_brown.colored(tableau_20_light_brown.get_name().replace('Tableau 20 ','')) + ' '
+ans += tableau_20_yellow.colored(tableau_20_yellow.get_name().replace('Tableau 20 ','')) + ' '
+ans += tableau_20_orange.colored(tableau_20_orange.get_name().replace('Tableau 20 ','')) + ' '
+ans += tableau_20_light_red.colored(tableau_20_light_red.get_name().replace('Tableau 20 ','')) + ' '
+ans += tableau_20_pink.colored(tableau_20_pink.get_name().replace('Tableau 20 ','')) + ' '
+ans += tableau_20_light_yellow.colored(tableau_20_light_yellow.get_name().replace('Tableau 20 ','')) + ' '
+ans += tableau_20_light_orange.colored(tableau_20_light_orange.get_name().replace('Tableau 20 ','')) + ' '
+ans += tableau_20_purple.colored(tableau_20_purple.get_name().replace('Tableau 20 ','')) + ' '
+ans += tableau_20_light_pink.colored(tableau_20_light_pink.get_name().replace('Tableau 20 ','')) + ' '
+ans += tableau_20_baby_blue.colored(tableau_20_baby_blue.get_name().replace('Tableau 20 ','')) + ' '
+ans += tableau_20_green.colored(tableau_20_green.get_name().replace('Tableau 20 ','')) + ' '
+ans += tableau_20_light_purple.colored(tableau_20_light_purple.get_name().replace('Tableau 20 ','')) + ' '
+ans += tableau_20_dark_grey.colored(tableau_20_dark_grey.get_name().replace('Tableau 20 ','')) + ' '
+ans += tableau_20_light_baby_blue.colored(tableau_20_light_baby_blue.get_name().replace('Tableau 20 ','')) + ' '
+##
+##ans += tableau_20_blue.colored('blue') + ' '
+##ans += tableau_20_light_green.colored('blue') + ' '
+##ans += tableau_20_brown.colored('blue') + ' '
+##ans += tableau_20_grey.colored('blue') + ' '
+##ans += tableau_20_light_blue.colored('blue') + ' '
+##ans += tableau_20_red.colored('blue') + ' '
+##ans += tableau_20_light_brown.colored('blue') + ' '
+##ans += tableau_20_yellow.colored('blue') + ' '
+##ans += tableau_20_orange.colored('blue') + ' '
+##ans += tableau_20_light_red.colored('blue') + ' '
+##ans += tableau_20_pink.colored('blue') + ' '
+##ans += tableau_20_light_yellow.colored('blue') + ' '
+##ans += tableau_20_light_orange.colored('blue') + ' '
+##ans += tableau_20_purple.colored('blue') + ' '
+##ans += tableau_20_light_pink.colored('blue') + ' '
+##ans += tableau_20_baby_blue.colored('blue') + ' '
+##ans += tableau_20_green.colored('blue') + ' '
+##ans += tableau_20_light_purple.colored('blue') + ' '
+##ans += tableau_20_dark_grey.colored('blue') + ' '
+##ans += tableau_20_light_baby_blue.colored('blue')
+print(ans)
+
+ans = xkcd_blue_with_a_hint_of_purple.colored(xkcd_blue_with_a_hint_of_purple.get_name().replace('xkcd ','')) + ' '
+ans += xkcd_bright_aqua.colored(xkcd_bright_aqua.get_name().replace('xkcd ','')) + ' '
+ans += xkcd_deep_violet.colored(xkcd_deep_violet.get_name().replace('xkcd ','')) + ' '
+ans += xkcd_mossy_green.colored(xkcd_mossy_green.get_name().replace('xkcd ','')) + ' '
+ans += xkcd_neon_yellow.colored(xkcd_neon_yellow.get_name().replace('xkcd ','')) + ' '
+ans += xkcd_ultramarine_blue.colored(xkcd_ultramarine_blue.get_name().replace('xkcd ','')) + ' '
+##ans += xkcd_mango.colored(xkcd_mango.get_name().replace('xkcd ','')) + ' '
+##ans += xkcd_vibrant_purple.colored(xkcd_vibrant_purple.get_name().replace('xkcd ','')) + ' '
+##ans += .colored(.get_name().replace('xkcd ','')) + ' '
+##ans += .colored(.get_name().replace('xkcd ','')) + ' '
+##ans += .colored(.get_name().replace('xkcd ','')) + ' '
+##ans += .colored(.get_name().replace('xkcd ','')) + ' '
+##ans += .colored(.get_name().replace('xkcd ','')) + ' '
+##ans += .colored(.get_name().replace('xkcd ','')) + ' '
+##ans += .colored(.get_name().replace('xkcd ','')) + ' '
+print(ans)
+
+ans = earthtone_brown_grey.colored(earthtone_brown_grey.get_name().replace('Earthtone ','')) + ' '
+ans += earthtone_light_brown_grey.colored(earthtone_light_brown_grey.get_name().replace('Earthtone ','')) + ' '
+ans += earthtone_light_grey.colored(earthtone_light_grey.get_name().replace('Earthtone ','')) + ' '
+ans += earthtone_dark_brown.colored(earthtone_dark_brown.get_name().replace('Earthtone ','')) + ' '
+ans += earthtone_medium_brown.colored(earthtone_medium_brown.get_name().replace('Earthtone ','')) + ' '
+ans += earthtone_light_brown.colored(earthtone_light_brown.get_name().replace('Earthtone ','')) + ' '
+ans += earthtone_mauroon.colored(earthtone_mauroon.get_name().replace('Earthtone ','')) + ' '
+ans += earthtone_orange.colored(earthtone_orange.get_name().replace('Earthtone ','')) + ' '
+ans += earthtone_yellow.colored(earthtone_yellow.get_name().replace('Earthtone ','')) + ' '
+ans += earthtone_dark_green.colored(earthtone_dark_green.get_name().replace('Earthtone ','')) + ' '
+ans += earthtone_green.colored(earthtone_green.get_name().replace('Earthtone ','')) + ' '
+ans += earthtone_light_green.colored(earthtone_light_green.get_name().replace('Earthtone ','')) + ' '
+ans += earthtone_dark_grey_blue.colored(earthtone_dark_grey_blue.get_name().replace('Earthtone ','')) + ' '
+ans += earthtone_grey_blue.colored(earthtone_grey_blue.get_name().replace('Earthtone ','')) + ' '
+ans += earthtone_light_grey_blue.colored(earthtone_light_grey_blue.get_name().replace('Earthtone ','')) + ' '
 print(ans)
 
 print("\x1b[38;2;255;255;255mEND RESET\x1b[0m")
 
-
+##def hex_to_rgb(hex_value):
+##    hex_value = hex_value.lstrip('#')
+##    #print(hex_value)
+##    my_tuple = tuple(int(hex_value[i:i+2], 16) for i in (0, 2, 4))
+##    return my_tuple[0],my_tuple[1],my_tuple[2]
+##
+##readfile = open(INPUTS_DIR + 'xkcd_colors.txt','r')
+##outfile = open(OUTPUTS_DIR + 'for_constants.txt','w')
+##for line in readfile:
+##    
+##    temp_line = line.strip('\n').split('\t')[0:2]
+##    #print(temp_line)
+##    red,green,blue = hex_to_rgb(temp_line[1])
+##    name = 'xkcd_' + temp_line[0].replace(' ','_')
+##    outfile.write(name + " = AdvancedColor('"+name.replace('_',' ')+"',"+str(red)+","+str(green)+","+str(blue)+",0,38,2)\n")
+##readfile.close()
+##outfile.close()
 
