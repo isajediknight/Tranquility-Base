@@ -62,6 +62,7 @@ elif((OS_TYPE == 'windows')):
 # < --- Begin Custom Classes Import --- >
 # Custom Colors for printing to the screen
 from custom_colors import *
+from constants import *
 # < ---  End  Custom Classes Import --- >
 
 class Parse:
@@ -140,12 +141,19 @@ class Parse:
         self.script_file = sys.argv[0]
 
         previous_item = ''
+        save_next_value = False
         for item in sys.argv[1:]:
-            for parameter_flag in self.parameter_flags:
-                if previous_item.find(parameter_flag) == 0:
-                    print(" < Warning > Value reassigned from " + previous_item + " to " + item)
-                    self.parameters[previous_item] = Parameter(self.get_value_datatype(item),item,False,False,previous_item)
-                    self.parameters[previous_item].show_parameter()
+
+            if(item[0] == '-' or item[0:1] == '--'):
+                parameter = item
+                save_next_value = True
+            elif(save_next_value):
+                self.parameters[parameter] = Parameter('string', item,False,False,previous_item)
+                save_next_value = False
+                if(item[0] == '-' or item[0:1] == '--'):
+                    parameter = item
+                    save_next_value = True
+
             previous_item = item
 
     def add_expectation(self,parameter_name = 'unnamed',datatype = 'string', required = False,hidden = False):
@@ -167,6 +175,11 @@ class Parse:
                 else:
                     value = input(key + ": ")
 
+                try:
+                    value = int(value)
+                except:
+                    pass
+
                 while(self.expected_parameters[key].get_parameter_type() != self.get_value_datatype(value)):
 
                     print(str(self.expected_parameters[key].get_parameter_type()) + " - " + self.get_value_datatype(value))
@@ -175,6 +188,20 @@ class Parse:
                         value = getpass.getpass(key + ": ")
                     else:
                         value = input(key + ": ")
+
+                    try:
+                        value = int(value)
+                    except:
+                        pass
+
+                try:
+                    my_datatype = 'string'
+                    if(type(value) == type(0)):
+                        my_datatype = 'integer'
+                except:
+                    pass
+
+                self.expected_parameters[key] = Parameter(my_datatype, value, False, False, key)
 
     def get_value_datatype(self,value):
         """
@@ -223,6 +250,13 @@ class Parse:
     def get_class_validation(self):
         return self.validation
 
+    def get_parameter(self,parameter):
+        return self.parameters[parameter]
+
+    # Returns the python file being run
+    def get_script_file(self):
+        return self.script_file
+
 class Parameter:
 
     def __init__(self, parameter_type = 'string', value = None, required = False, hidden = False, parameter_name=''):
@@ -243,75 +277,78 @@ class Parameter:
 
         this_value = value
         # See if it is a relative file path
-        file_check = os.path.isfile(this_value)
-
-        # See if it is an absolute file path
-        if(OS_TYPE == 'windows'):
-            if(os.path.isfile(os.getcwd() + '\\' + this_value)):
-                file_check = True
-            elif(file_check):
-                relative_path = True
-
-            # Is it a relative or an absolute directory
-            if(os.path.isdir(os.getcwd() + '\\' + this_value)):
-                dir_check = True
-            elif(os.path.isdir(this_value)):
-                dir_check = True
-                relative_path = True
-
-            # Human readable text output
-            if(file_check and not relative_path):
-                value_type = "Relative Path to File"
-                self.relative_path_to_file = True
-                self.parameter_type = 'file'
-            elif(file_check and relative_path):
-                value_type = "Abosulte Path to File"
-                self.absolute_path_to_file = True
-                self.parameter_type = 'file'
-            elif(dir_check and not relative_path):
-                value_type = "Relative Path to Directory"
-                self.relative_path_to_directory = True
-                self.parameter_type = 'directory'
-            elif(dir_check and relative_path):
-                value_type = "Absolute Path to Directory"
-                self.absolute_path_to_directory = True
-                self.parameter_type = 'directory'
-            else:
-                value_type = "Neither"
+        if(type(this_value) != type(None)):
+            file_check = os.path.isfile(this_value)
         
-        # mac or Linux
-        else:
-            if(os.path.isfile(os.getcwd() + '/' + this_value)):
-                file_check = True
-            elif(file_check):
-                relative_path = True
+            # See if it is an absolute file path
+            if(OS_TYPE == 'windows'):
+                if(os.path.isfile(os.getcwd() + '\\' + str(this_value))):
+                    file_check = True
+                elif(file_check):
+                    relative_path = True
 
-            # Is it a relative or an absolute directory
-            if(os.path.isdir(os.getcwd() + '/' + this_value)):
-                dir_check = True
-            elif(os.path.isdir(this_value)):
-                dir_check = True
-                relative_path = True
+                # Is it a relative or an absolute directory
+                if(os.path.isdir(os.getcwd() + '\\' + str(this_value))):
+                    dir_check = True
+                elif(os.path.isdir(str(this_value))):
+                    dir_check = True
+                    relative_path = True
 
-            # Human readable text output
-            if(file_check and not relative_path):
-                value_type = "Relative Path to File"
-                self.relative_path_to_file = True
-                self.parameter_type = 'file'
-            elif(file_check and relative_path):
-                value_type = "Abosulte Path to File"
-                self.absolute_path_to_file = True
-                self.parameter_type = 'file'
-            elif(dir_check and not relative_path):
-                value_type = "Relative Path to Directory"
-                self.relative_path_to_directory = True
-                self.parameter_type = 'directory'
-            elif(dir_check and relative_path):
-                value_type = "Absolute Path to Directory"
-                self.absolute_path_to_directory = True
-                self.parameter_type = 'directory'
+                # Human readable text output
+                if(file_check and not relative_path):
+                    value_type = "Relative Path to File"
+                    self.relative_path_to_file = True
+                    self.parameter_type = 'file'
+                elif(file_check and relative_path):
+                    value_type = "Abosulte Path to File"
+                    self.absolute_path_to_file = True
+                    self.parameter_type = 'file'
+                elif(dir_check and not relative_path):
+                    value_type = "Relative Path to Directory"
+                    self.relative_path_to_directory = True
+                    self.parameter_type = 'directory'
+                elif(dir_check and relative_path):
+                    value_type = "Absolute Path to Directory"
+                    self.absolute_path_to_directory = True
+                    self.parameter_type = 'directory'
+                else:
+                    value_type = "Neither"
+            
+            # mac or Linux
             else:
-                value_type = "Neither"
+                if(os.path.isfile(os.getcwd() + '/' + str(this_value))):
+                    file_check = True
+                elif(file_check):
+                    relative_path = True
+
+                # Is it a relative or an absolute directory
+                if(os.path.isdir(os.getcwd() + '/' + str(this_value))):
+                    dir_check = True
+                elif(os.path.isdir(str(this_value))):
+                    dir_check = True
+                    relative_path = True
+
+                # Human readable text output
+                if(file_check and not relative_path):
+                    value_type = "Relative Path to File"
+                    self.relative_path_to_file = True
+                    self.parameter_type = 'file'
+                elif(file_check and relative_path):
+                    value_type = "Abosulte Path to File"
+                    self.absolute_path_to_file = True
+                    self.parameter_type = 'file'
+                elif(dir_check and not relative_path):
+                    value_type = "Relative Path to Directory"
+                    self.relative_path_to_directory = True
+                    self.parameter_type = 'directory'
+                elif(dir_check and relative_path):
+                    value_type = "Absolute Path to Directory"
+                    self.absolute_path_to_directory = True
+                    self.parameter_type = 'directory'
+                else:
+                    value_type = "Neither"
+        else:
+            file_check = False
 
     # < --- Begin Setters --- >
     def set_value(self,value):
@@ -351,14 +388,10 @@ class Parameter:
         """
         Displays all the parameters that have been entered
         """
-        # For text coloration
-        text = ColoredText(['datatype'], ['38;5;30m'])
-
         print("")
-        #print("Parameter:\t" + )
-        print("Name:\t\t" + text.cc(self.parameter_name,'orange'))
-        print("Datatype:\t" + text.cc(self.parameter_type,'datatype'))
-        print("Required:\t" + text.cc(str(self.required),'red'))
-        print("Hidden:\t\t" + text.cc(str(self.hidden),'green'))
-        print("Value:\t\t" + str(self.value))
+        print("Name:\t\t" + tableau_10_orange.colored(self.parameter_name))
+        print("Datatype:\t" + minecraft_blue.colored(self.parameter_type))
+        print("Required:\t" + tableau_10_red.colored(str(self.required)))
+        print("Hidden:\t\t" + tableau_10_green.colored(str(self.hidden)))
+        print("Value:\t\t" + white.colored(str(self.value)))
         print("")
