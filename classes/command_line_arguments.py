@@ -201,7 +201,8 @@ class Parse:
                 except:
                     pass
 
-                self.expected_parameters[key] = Parameter(my_datatype, value, False, False, key)
+                # This needs to be better written so the required and hidden fields are correctly passed in
+                self.expected_parameters[key] = Parameter(my_datatype, value, self.expected_parameters[key].get_required(), self.expected_parameters[key].get_hidden(), key)
 
     def get_value_datatype(self,value):
         """
