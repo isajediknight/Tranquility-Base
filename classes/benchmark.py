@@ -453,6 +453,30 @@ class Benchmark:
             ans += str(self.microseconds) + ' ' + self.microseconds_text
         return ans
 
+    def human_readable_string_without_microseconds(self):
+        """
+        Returns a string of the elapsed time
+        """
+
+        ans = ''
+
+        need_one_space = False
+
+        if (self.boolean_running):
+            return self.current_benchmark_without_stopping()
+        else:
+            if (self.weeks > 0):
+                ans += str(self.weeks) + ' ' + self.weeks_text + ' '
+            if (self.days > 0):
+                ans += str(self.days) + ' ' + self.days_text + ' '
+            if (self.hours > 0):
+                ans += str(self.hours) + ' ' + self.hours_text + ' '
+            if (self.minutes > 0):
+                ans += str(self.minutes) + ' ' + self.minutes_text + ' '
+            if (self.seconds > 0):
+                ans += str(self.seconds) + ' ' + self.seconds_text + ' '
+        return ans
+
     def seconds_to_human_readable(self, seconds, return_type='string'):
         """
         Method to get the difference between times more human readable
