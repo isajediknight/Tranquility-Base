@@ -1,10 +1,15 @@
 """This module contains code for interacting with the RPC Websocket endpoint."""
+
 import itertools
 from typing import Any, Dict, List, Optional, Sequence, Union, cast
 
 from solders.account_decoder import UiDataSliceConfig
+from solders.pubkey import Pubkey
 from solders.rpc.config import (
     RpcAccountInfoConfig,
+    RpcBlockSubscribeConfig,
+    RpcBlockSubscribeFilter,
+    RpcBlockSubscribeFilterMentions,
     RpcProgramAccountsConfig,
     RpcSignatureSubscribeConfig,
     RpcTransactionLogsConfig,
@@ -15,6 +20,8 @@ from solders.rpc.filter import Memcmp
 from solders.rpc.requests import (
     AccountSubscribe,
     AccountUnsubscribe,
+    BlockSubscribe,
+    BlockUnsubscribe,
     Body,
     LogsSubscribe,
     LogsUnsubscribe,
@@ -36,13 +43,13 @@ from solders.rpc.responses import Notification
 from solders.rpc.responses import SubscriptionError as SoldersSubscriptionError
 from solders.rpc.responses import SubscriptionResult, parse_websocket_message
 from solders.signature import Signature
+from solders.transaction_status import TransactionDetails
 from websockets.legacy.client import WebSocketClientProtocol
 from websockets.legacy.client import connect as ws_connect
 
-from solana.publickey import PublicKey
 from solana.rpc import types
 from solana.rpc.commitment import Commitment
-from solana.rpc.core import _ACCOUNT_ENCODING_TO_SOLDERS, _COMMITMENT_TO_SOLDERS
+from solana.rpc.core import _ACCOUNT_ENCODING_TO_SOLDERS, _COMMITMENT_TO_SOLDERS, _TX_ENCODING_TO_SOLDERS
 
 
 class SubscriptionError(Exception):
@@ -105,7 +112,10 @@ class SolanaWsClientProtocol(WebSocketClientProtocol):
         return self._process_rpc_response(cast(str, data))
 
     async def account_subscribe(
-        self, pubkey: PublicKey, commitment: Optional[Commitment] = None, encoding: Optional[str] = None
+        self,
+        pubkey: Pubkey,
+        commitment: Optional[Commitment] = None,
+        encoding: Optional[str] = None,
     ) -> None:
         """Subscribe to an account to receive notifications when the lamports or data change.
 
@@ -122,7 +132,7 @@ class SolanaWsClientProtocol(WebSocketClientProtocol):
             if commitment_to_use is None and encoding_to_use is None
             else RpcAccountInfoConfig(encoding=encoding_to_use, commitment=commitment_to_use)
         )
-        req = AccountSubscribe(pubkey.to_solders(), config, req_id)
+        req = AccountSubscribe(pubkey, config, req_id)
         await self.send_data(req)
 
     async def account_unsubscribe(
@@ -170,9 +180,55 @@ class SolanaWsClientProtocol(WebSocketClientProtocol):
         await self.send_data(req)
         del self.subscriptions[subscription]
 
+    async def block_subscribe(
+        self,
+        filter_: Union[RpcBlockSubscribeFilter, RpcBlockSubscribeFilterMentions] = RpcBlockSubscribeFilter.All,
+        commitment: Optional[Commitment] = None,
+        encoding: Optional[str] = None,
+        transaction_details: Union[TransactionDetails, None] = None,
+        show_rewards: Optional[bool] = None,
+        max_supported_transaction_version: Optional[int] = None,
+    ) -> None:
+        """Subscribe to blocks.
+
+        Args:
+            filter_: filter criteria for the blocks.
+            commitment: The commitment level to use.
+            encoding: Encoding to use.
+            transaction_details: level of transaction detail to return.
+            show_rewards: whether to populate the rewards array.
+            max_supported_transaction_version: the max transaction version to return in responses.
+        """
+        req_id = self.increment_counter_and_get_id()
+        commitment_to_use = None if commitment is None else _COMMITMENT_TO_SOLDERS[commitment]
+        encoding_to_use = None if encoding is None else _TX_ENCODING_TO_SOLDERS[encoding]
+        config = RpcBlockSubscribeConfig(
+            commitment=commitment_to_use,
+            encoding=encoding_to_use,
+            transaction_details=transaction_details,
+            show_rewards=show_rewards,
+            max_supported_transaction_version=max_supported_transaction_version,
+        )
+        req = BlockSubscribe(filter_, config, req_id)
+        await self.send_data(req)
+
+    async def block_unsubscribe(
+        self,
+        subscription: int,
+    ) -> None:
+        """Unsubscribe from blocks.
+
+        Args:
+            subscription: ID of subscription to cancel.
+        """
+        req_id = self.increment_counter_and_get_id()
+        req = BlockUnsubscribe(subscription, req_id)
+        await self.send_data(req)
+        del self.subscriptions[subscription]
+
     async def program_subscribe(  # pylint: disable=too-many-arguments
         self,
-        program_id: PublicKey,
+        program_id: Pubkey,
         commitment: Optional[Commitment] = None,
         encoding: Optional[str] = None,
         data_slice: Optional[types.DataSliceOpts] = None,
@@ -199,13 +255,15 @@ class SolanaWsClientProtocol(WebSocketClientProtocol):
                 None if data_slice is None else UiDataSliceConfig(offset=data_slice.offset, length=data_slice.length)
             )
             account_config = RpcAccountInfoConfig(
-                encoding=encoding_to_use, commitment=commitment_to_use, data_slice=data_slice_to_use
+                encoding=encoding_to_use,
+                commitment=commitment_to_use,
+                data_slice=data_slice_to_use,
             )
             filters_to_use: Optional[List[Union[int, Memcmp]]] = (
                 None if filters is None else [x if isinstance(x, int) else Memcmp(*x) for x in filters]
             )
             config = RpcProgramAccountsConfig(account_config, filters_to_use)
-        req = ProgramSubscribe(program_id.to_solders(), config, req_id)
+        req = ProgramSubscribe(program_id, config, req_id)
         await self.send_data(req)
 
     async def program_unsubscribe(
@@ -353,5 +411,13 @@ class connect(ws_connect):  # pylint: disable=invalid-name,too-few-public-method
 
         Args:
             uri: The websocket endpoint.
+            **kwargs: Keyword arguments for ``websockets.legacy.client.connect``
         """
-        super().__init__(uri, **kwargs, create_protocol=SolanaWsClientProtocol)
+        # Ensure that create_protocol explicitly creates a SolanaWsClientProtocol
+        kwargs.setdefault("create_protocol", SolanaWsClientProtocol)
+        super().__init__(uri, **kwargs)
+
+    async def __aenter__(self) -> SolanaWsClientProtocol:
+        """Overrides to specify the type of protocol explicitly."""
+        protocol = await super().__aenter__()
+        return cast(SolanaWsClientProtocol, protocol)

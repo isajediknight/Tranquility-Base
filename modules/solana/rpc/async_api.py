@@ -1,8 +1,11 @@
 """Async API client to interact with the Solana JSON RPC Endpoint."""  # pylint: disable=too-many-lines
+
 import asyncio
 from time import time
 from typing import Dict, List, Optional, Sequence, Union
 
+from solders.message import VersionedMessage
+from solders.pubkey import Pubkey
 from solders.rpc.responses import (
     GetAccountInfoMaybeJsonParsedResp,
     GetAccountInfoResp,
@@ -18,9 +21,11 @@ from solders.rpc.responses import (
     GetFeeForMessageResp,
     GetFirstAvailableBlockResp,
     GetGenesisHashResp,
+    GetHealthResp,
     GetIdentityResp,
     GetInflationGovernorResp,
     GetInflationRateResp,
+    GetInflationRewardResp,
     GetLargestAccountsResp,
     GetLatestBlockhashResp,
     GetLeaderScheduleResp,
@@ -34,7 +39,6 @@ from solders.rpc.responses import (
     GetSignatureStatusesResp,
     GetSlotLeaderResp,
     GetSlotResp,
-    GetStakeActivationResp,
     GetSupplyResp,
     GetTokenAccountBalanceResp,
     GetTokenAccountsByDelegateJsonParsedResp,
@@ -54,16 +58,17 @@ from solders.rpc.responses import (
     ValidatorExitResp,
 )
 from solders.signature import Signature
+from solders.transaction import Transaction, VersionedTransaction
 
-from solana.blockhash import Blockhash, BlockhashCache
-from solana.keypair import Keypair
-from solana.message import Message
-from solana.publickey import PublicKey
 from solana.rpc import types
-from solana.transaction import Transaction
 
-from .commitment import Commitment, Finalized
-from .core import _COMMITMENT_TO_SOLDERS, TransactionExpiredBlockheightExceededError, UnconfirmedTxError, _ClientCore
+from .commitment import Commitment
+from .core import (
+    _COMMITMENT_TO_SOLDERS,
+    TransactionExpiredBlockheightExceededError,
+    UnconfirmedTxError,
+    _ClientCore,
+)
 from .providers import async_http
 
 
@@ -73,37 +78,24 @@ class AsyncClient(_ClientCore):  # pylint: disable=too-many-public-methods
     Args:
         endpoint: URL of the RPC endpoint.
         commitment: Default bank state to query. It can be either "finalized", "confirmed" or "processed".
-        blockhash_cache: (Experimental) If True, keep a cache of recent blockhashes to make
-            `send_transaction` calls faster.
-            You can also pass your own BlockhashCache object to customize its parameters.
-
-            The cache works as follows:
-
-            1.  Retrieve the oldest unused cached blockhash that is younger than `ttl` seconds,
-                where `ttl` is defined in the BlockhashCache (we prefer unused blockhashes because
-                reusing blockhashes can cause errors in some edge cases, and we prefer slightly
-                older blockhashes because they're more likely to be accepted by every validator).
-            2.  If there are no unused blockhashes in the cache, take the oldest used
-                blockhash that is younger than `ttl` seconds.
-            3.  Fetch a new recent blockhash *after* sending the transaction. This is to keep the cache up-to-date.
-
-            If you want something tailored to your use case, run your own loop that fetches the recent blockhash,
-            and pass that value in your `.send_transaction` calls.
         timeout: HTTP request timeout in seconds.
         extra_headers: Extra headers to pass for HTTP request.
+        proxy: Proxy URL to pass to the HTTP client.
     """
 
     def __init__(
         self,
         endpoint: Optional[str] = None,
         commitment: Optional[Commitment] = None,
-        blockhash_cache: Union[BlockhashCache, bool] = False,
         timeout: float = 10,
         extra_headers: Optional[Dict[str, str]] = None,
+        proxy: Optional[str] = None,
     ) -> None:
         """Init API client."""
-        super().__init__(commitment, blockhash_cache)
-        self._provider = async_http.AsyncHTTPProvider(endpoint, timeout=timeout, extra_headers=extra_headers)
+        super().__init__(commitment)
+        self._provider = async_http.AsyncHTTPProvider(
+            endpoint, timeout=timeout, extra_headers=extra_headers, proxy=proxy
+        )
 
     async def __aenter__(self) -> "AsyncClient":
         """Use as a context manager."""
@@ -128,19 +120,21 @@ class AsyncClient(_ClientCore):  # pylint: disable=too-many-public-methods
         Returns:
             True if the client is connected.
         """
-        return await self._provider.is_connected()
+        body = self._get_health_body()
+        response = await self._provider.make_request(body, GetHealthResp)
+        return response.value == "ok"
 
-    async def get_balance(self, pubkey: PublicKey, commitment: Optional[Commitment] = None) -> GetBalanceResp:
+    async def get_balance(self, pubkey: Pubkey, commitment: Optional[Commitment] = None) -> GetBalanceResp:
         """Returns the balance of the account of provided Pubkey.
 
         Args:
-            pubkey: Pubkey of account to query, as base-58 encoded string or PublicKey object.
+            pubkey: Pubkey of account to query
             commitment: Bank state to query. It can be either "finalized", "confirmed" or "processed".
 
         Example:
-            >>> from solana.publickey import PublicKey
+            >>> from solders.pubkey import Pubkey
             >>> solana_client = AsyncClient("http://localhost:8899")
-            >>> (await solana_client.get_balance(PublicKey(1))).value # doctest: +SKIP
+            >>> (await solana_client.get_balance(Pubkey([0] * 31 + [1]))).value # doctest: +SKIP
             0
         """
         body = self._get_balance_body(pubkey, commitment)
@@ -148,7 +142,7 @@ class AsyncClient(_ClientCore):  # pylint: disable=too-many-public-methods
 
     async def get_account_info(
         self,
-        pubkey: PublicKey,
+        pubkey: Pubkey,
         commitment: Optional[Commitment] = None,
         encoding: str = "base64",
         data_slice: Optional[types.DataSliceOpts] = None,
@@ -156,7 +150,7 @@ class AsyncClient(_ClientCore):  # pylint: disable=too-many-public-methods
         """Returns all the account info for the specified public key.
 
         Args:
-            pubkey: Pubkey of account to query, as base-58 encoded string or PublicKey object.
+            pubkey: Pubkey of account to query
             commitment: Bank state to query. It can be either "finalized", "confirmed" or "processed".
             encoding: (optional) Encoding for Account data, either "base58" (slow), "base64", or
                 "jsonParsed". Default is "base64".
@@ -171,9 +165,9 @@ class AsyncClient(_ClientCore):  # pylint: disable=too-many-public-methods
                 `length`: <usize> fields; only available for "base58" or "base64" encoding.
 
         Example:
-            >>> from solana.publickey import PublicKey
+            >>> from solders.pubkey import Pubkey
             >>> solana_client = AsyncClient("http://localhost:8899")
-            >>> (await solana_client.get_account_info(PublicKey(1))).value # doctest: +SKIP
+            >>> (await solana_client.get_account_info(Pubkey([0] * 31 + [1]))).value # doctest: +SKIP
             Account(
                 Account {
                     lamports: 4104230290,
@@ -185,13 +179,16 @@ class AsyncClient(_ClientCore):  # pylint: disable=too-many-public-methods
             )
         """  # noqa: E501 # pylint: disable=line-too-long
         body = self._get_account_info_body(
-            pubkey=pubkey, commitment=commitment, encoding=encoding, data_slice=data_slice
+            pubkey=pubkey,
+            commitment=commitment,
+            encoding=encoding,
+            data_slice=data_slice,
         )
         return await self._provider.make_request(body, GetAccountInfoResp)
 
     async def get_account_info_json_parsed(
         self,
-        pubkey: PublicKey,
+        pubkey: Pubkey,
         commitment: Optional[Commitment] = None,
     ) -> GetAccountInfoMaybeJsonParsedResp:
         """Returns all the account info for the specified public key.
@@ -199,17 +196,17 @@ class AsyncClient(_ClientCore):  # pylint: disable=too-many-public-methods
         If JSON formatting is not available for this account, base64 is returned.
 
         Args:
-            pubkey: Pubkey of account to query, as base-58 encoded string or PublicKey object.
+            pubkey: Pubkey of account to query
             commitment: Bank state to query. It can be either "finalized", "confirmed" or "processed".
 
         Example:
-            >>> from solana.publickey import PublicKey
+            >>> from solders.pubkey import Pubkey
             >>> solana_client = AsyncClient("http://localhost:8899")
-            >>> (await solana_client.get_account_info_json_parsed(PublicKey(1))).value.owner # doctest: +SKIP
+            >>> (await solana_client.get_account_info_json_parsed(Pubkey([0] * 31 + [1]))).value.owner # doctest: +SKIP
             Pubkey(
                 11111111111111111111111111111111,
             )
-        """  # noqa: E501 # pylint: disable=line-too-long
+        """
         body = self._get_account_info_body(pubkey=pubkey, commitment=commitment, encoding="jsonParsed", data_slice=None)
         return await self._provider.make_request(body, GetAccountInfoMaybeJsonParsedResp)
 
@@ -255,7 +252,7 @@ class AsyncClient(_ClientCore):  # pylint: disable=too-many-public-methods
         self,
         slot: int,
         encoding: str = "json",
-        max_supported_transaction_version: int = None,
+        max_supported_transaction_version: Union[int, None] = None,
     ) -> GetBlockResp:
         """Returns identity and transaction information about a confirmed block in the ledger.
 
@@ -272,7 +269,7 @@ class AsyncClient(_ClientCore):  # pylint: disable=too-many-public-methods
             Hash(
                 EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG,
             )
-        """  # noqa: E501 # pylint: disable=line-too-long
+        """
         body = self._get_block_body(slot, encoding, max_supported_transaction_version)
         return await self._provider.make_request(body, GetBlockResp)
 
@@ -330,7 +327,7 @@ class AsyncClient(_ClientCore):  # pylint: disable=too-many-public-methods
 
     async def get_signatures_for_address(
         self,
-        account: PublicKey,
+        account: Pubkey,
         before: Optional[Signature] = None,
         until: Optional[Signature] = None,
         limit: Optional[int] = None,
@@ -351,13 +348,13 @@ class AsyncClient(_ClientCore):  # pylint: disable=too-many-public-methods
 
         Example:
             >>> solana_client = AsyncClient("http://localhost:8899")
-            >>> from solana.publickey import PublicKey
-            >>> pubkey = PublicKey("Vote111111111111111111111111111111111111111")
+            >>> from solders.pubkey import Pubkey
+            >>> pubkey = Pubkey.from_string("Vote111111111111111111111111111111111111111")
             >>> (await solana_client.get_signatures_for_address(pubkey, limit=1)).value[0].signature # doctest: +SKIP
             Signature(
                 1111111111111111111111111111111111111111111111111111111111111111,
             )
-        """  # noqa: E501 # pylint: disable=line-too-long
+        """
         body = self._get_signatures_for_address_body(account, before, until, limit, commitment)
         return await self._provider.make_request(body, GetSignaturesForAddressResp)
 
@@ -415,7 +412,7 @@ class AsyncClient(_ClientCore):  # pylint: disable=too-many-public-methods
         return await self._provider.make_request(self._get_epoch_schedule, GetEpochScheduleResp)
 
     async def get_fee_for_message(
-        self, message: Message, commitment: Optional[Commitment] = None
+        self, message: VersionedMessage, commitment: Optional[Commitment] = None
     ) -> GetFeeForMessageResp:
         """Returns the fee for a message.
 
@@ -424,16 +421,17 @@ class AsyncClient(_ClientCore):  # pylint: disable=too-many-public-methods
             commitment: Bank state to query. It can be either "finalized", "confirmed" or "processed".
 
         Example:
-            >>> from solana.keypair import Keypair
-            >>> from solana.system_program import TransferParams, transfer
-            >>> from solana.transaction import Transaction
-            >>> sender, receiver = Keypair.from_seed(bytes(PublicKey(1))), Keypair.from_seed(bytes(PublicKey(2)))
-            >>> txn = Transaction().add(transfer(TransferParams(
-            ...     from_pubkey=sender.public_key, to_pubkey=receiver.public_key, lamports=1000)))
+            >>> from solders.keypair import Keypair
+            >>> from solders.system_program import TransferParams, transfer
+            >>> from solders.message import Message
+            >>> leading_zeros = [0] * 31
+            >>> sender, receiver = Keypair.from_seed(leading_zeros + [1]), Keypair.from_seed(leading_zeros + [2])
+            >>> msg = Message([transfer(TransferParams(
+            ...     from_pubkey=sender.pubkey(), to_pubkey=receiver.pubkey(), lamports=1000))])
             >>> solana_client = AsyncClient("http://localhost:8899")
-            >>> (await solana_client.get_fee_for_message(txn.compile_message())).value # doctest: +SKIP
+            >>> (await solana_client.get_fee_for_message(msg)).value # doctest: +SKIP
             5000
-        """  # noqa: E501 # pylint: disable=line-too-long
+        """
         body = self._get_fee_for_message_body(message, commitment)
         return await self._provider.make_request(body, GetFeeForMessageResp)
 
@@ -495,6 +493,24 @@ class AsyncClient(_ClientCore):  # pylint: disable=too-many-public-methods
         """
         return await self._provider.make_request(self._get_inflation_rate, GetInflationRateResp)
 
+    async def get_inflation_reward(
+        self, pubkeys: List[Pubkey], epoch: Optional[int] = None, commitment: Optional[Commitment] = None
+    ) -> GetInflationRewardResp:
+        """Returns the inflation / staking reward for a list of addresses for an epoch.
+
+        Args:
+            pubkeys: An array of addresses to query, as base-58 encoded strings
+            epoch: (optional) An epoch for which the reward occurs. If omitted, the previous epoch will be used
+            commitment: Bank state to query. It can be either "finalized" or "confirmed".
+
+        Example:
+            >>> solana_client = AsyncClient("http://localhost:8899")
+            >>> (await solana_client.get_inflation_reward()).value.amount # doctest: +SKIP
+            2500
+        """
+        body = self._get_inflation_reward_body(pubkeys, epoch, commitment)
+        return await self._provider.make_request(body, GetInflationRewardResp)
+
     async def get_largest_accounts(
         self, filter_opt: Optional[str] = None, commitment: Optional[Commitment] = None
     ) -> GetLargestAccountsResp:
@@ -552,7 +568,7 @@ class AsyncClient(_ClientCore):  # pylint: disable=too-many-public-methods
 
     async def get_multiple_accounts(
         self,
-        pubkeys: List[PublicKey],
+        pubkeys: List[Pubkey],
         commitment: Optional[Commitment] = None,
         encoding: str = "base64",
         data_slice: Optional[types.DataSliceOpts] = None,
@@ -560,7 +576,7 @@ class AsyncClient(_ClientCore):  # pylint: disable=too-many-public-methods
         """Returns all the account info for a list of public keys.
 
         Args:
-            pubkeys: list of Pubkeys to query, as base-58 encoded string or PublicKey object.
+            pubkeys: list of Pubkeys to query
             commitment: Bank state to query. It can be either "finalized", "confirmed" or "processed".
             encoding: (optional) Encoding for Account data, either "base58" (slow) or "base64".
 
@@ -571,43 +587,49 @@ class AsyncClient(_ClientCore):  # pylint: disable=too-many-public-methods
                 `length`: <usize> fields; only available for "base58" or "base64" encoding.
 
         Example:
-            >>> from solana.publickey import PublicKey
+            >>> from solders.pubkey import Pubkey
             >>> solana_client = AsyncClient("http://localhost:8899")
-            >>> pubkeys = [PublicKey("6ZWcsUiWJ63awprYmbZgBQSreqYZ4s6opowP4b7boUdh"), PublicKey("HkcE9sqQAnjJtECiFsqGMNmUho3ptXkapUPAqgZQbBSY")]
+            >>> pubkeys = [Pubkey.from_string("6ZWcsUiWJ63awprYmbZgBQSreqYZ4s6opowP4b7boUdh"), Pubkey.from_string("HkcE9sqQAnjJtECiFsqGMNmUho3ptXkapUPAqgZQbBSY")]
             >>> (await solana_client.get_multiple_accounts(pubkeys)).value[0].lamports # doctest: +SKIP
             1
         """  # noqa: E501 # pylint: disable=line-too-long
         body = self._get_multiple_accounts_body(
-            pubkeys=pubkeys, commitment=commitment, encoding=encoding, data_slice=data_slice
+            pubkeys=pubkeys,
+            commitment=commitment,
+            encoding=encoding,
+            data_slice=data_slice,
         )
         return await self._provider.make_request(body, GetMultipleAccountsResp)
 
     async def get_multiple_accounts_json_parsed(
         self,
-        pubkeys: List[PublicKey],
+        pubkeys: List[Pubkey],
         commitment: Optional[Commitment] = None,
     ) -> GetMultipleAccountsMaybeJsonParsedResp:
         """Returns all the account info for a list of public keys.
 
         Args:
-            pubkeys: list of Pubkeys to query, as base-58 encoded string or PublicKey object.
+            pubkeys: list of Pubkeys to query
             commitment: Bank state to query. It can be either "finalized", "confirmed" or "processed".
 
         Example:
-            >>> from solana.publickey import PublicKey
+            >>> from solders.pubkey import Pubkey
             >>> solana_client = AsyncClient("http://localhost:8899")
-            >>> pubkeys = [PublicKey("6ZWcsUiWJ63awprYmbZgBQSreqYZ4s6opowP4b7boUdh"), PublicKey("HkcE9sqQAnjJtECiFsqGMNmUho3ptXkapUPAqgZQbBSY")]
+            >>> pubkeys = [Pubkey.from_string("6ZWcsUiWJ63awprYmbZgBQSreqYZ4s6opowP4b7boUdh"), Pubkey.from_string("HkcE9sqQAnjJtECiFsqGMNmUho3ptXkapUPAqgZQbBSY")]
             >>> asyncio.run(solana_client.get_multiple_accounts(pubkeys)).value[0].lamports # doctest: +SKIP
             1
         """  # noqa: E501 # pylint: disable=line-too-long
         body = self._get_multiple_accounts_body(
-            pubkeys=pubkeys, commitment=commitment, encoding="jsonParsed", data_slice=None
+            pubkeys=pubkeys,
+            commitment=commitment,
+            encoding="jsonParsed",
+            data_slice=None,
         )
-        return await self._provider.make_request(body, GetMultipleAccountsResp)
+        return await self._provider.make_request(body, GetMultipleAccountsMaybeJsonParsedResp)
 
     async def get_program_accounts(  # pylint: disable=too-many-arguments
         self,
-        pubkey: PublicKey,
+        pubkey: Pubkey,
         commitment: Optional[Commitment] = None,
         encoding: Optional[str] = None,
         data_slice: Optional[types.DataSliceOpts] = None,
@@ -616,7 +638,7 @@ class AsyncClient(_ClientCore):  # pylint: disable=too-many-public-methods
         """Returns all accounts owned by the provided program Pubkey.
 
         Args:
-            pubkey: Pubkey of program, as base-58 encoded string or PublicKey object.
+            pubkey: Pubkey of program
             commitment: Bank state to query. It can be either "finalized", "confirmed" or "processed".
             encoding: (optional) Encoding for the returned Transaction, either jsonParsed",
                 "base58" (slow), or "base64".
@@ -629,7 +651,7 @@ class AsyncClient(_ClientCore):  # pylint: disable=too-many-public-methods
             >>> from typing import List, Union
             >>> solana_client = AsyncClient("http://localhost:8899")
             >>> memcmp_opts = types.MemcmpOpts(offset=4, bytes="3Mc6vR")
-            >>> pubkey = PublicKey("4Nd1mBQtrMJVYVfKf2PJy9NZUZdTAsp7D4xWLs4gDB4T")
+            >>> pubkey = Pubkey.from_string("4Nd1mBQtrMJVYVfKf2PJy9NZUZdTAsp7D4xWLs4gDB4T")
             >>> filters: List[Union[int, types.MemcmpOpts]] = [17, memcmp_opts]
             >>> (await solana_client.get_program_accounts(pubkey, filters=filters)).value[0].account.lamports # doctest: +SKIP
             1
@@ -645,14 +667,14 @@ class AsyncClient(_ClientCore):  # pylint: disable=too-many-public-methods
 
     async def get_program_accounts_json_parsed(  # pylint: disable=too-many-arguments
         self,
-        pubkey: PublicKey,
+        pubkey: Pubkey,
         commitment: Optional[Commitment] = None,
         filters: Optional[Sequence[Union[int, types.MemcmpOpts]]] = None,
     ) -> GetProgramAccountsMaybeJsonParsedResp:
         """Returns all accounts owned by the provided program Pubkey.
 
         Args:
-            pubkey: Pubkey of program, as base-58 encoded string or PublicKey object.
+            pubkey: Pubkey of program
             commitment: Bank state to query. It can be either "finalized", "confirmed" or "processed".
             filters: (optional) Options to compare a provided series of bytes with program account data at a particular offset.
                 Note: an int entry is converted to a `dataSize` filter.
@@ -661,7 +683,7 @@ class AsyncClient(_ClientCore):  # pylint: disable=too-many-public-methods
             >>> from typing import List, Union
             >>> solana_client = AsyncClient("http://localhost:8899")
             >>> memcmp_opts = types.MemcmpOpts(offset=4, bytes="3Mc6vR")
-            >>> pubkey = PublicKey("4Nd1mBQtrMJVYVfKf2PJy9NZUZdTAsp7D4xWLs4gDB4T")
+            >>> pubkey = Pubkey.from_string("4Nd1mBQtrMJVYVfKf2PJy9NZUZdTAsp7D4xWLs4gDB4T")
             >>> filters: List[Union[int, types.MemcmpOpts]] = [17, memcmp_opts]
             >>> (await solana_client.get_program_accounts(pubkey, filters=filters)).value[0].account.lamports # doctest: +SKIP
             1
@@ -752,25 +774,6 @@ class AsyncClient(_ClientCore):  # pylint: disable=too-many-public-methods
         body = self._get_slot_leader_body(commitment)
         return await self._provider.make_request(body, GetSlotLeaderResp)
 
-    async def get_stake_activation(
-        self, pubkey: PublicKey, epoch: Optional[int] = None, commitment: Optional[Commitment] = None
-    ) -> GetStakeActivationResp:
-        """Returns epoch activation information for a stake account.
-
-        Args:
-            pubkey: Pubkey of stake account to query, as base-58 encoded string or PublicKey object.
-            epoch: (optional) Epoch for which to calculate activation details. If parameter not provided,
-                defaults to current epoch.
-            commitment: Bank state to query. It can be either "finalized", "confirmed" or "processed".
-
-        Example:
-            >>> solana_client = AsyncClient("http://localhost:8899")
-            >>> (await solana_client.get_stake_activation()).value.active # doctest: +SKIP
-            124429280
-        """
-        body = self._get_stake_activation_body(pubkey, epoch, commitment)
-        return await self._provider.make_request(body, GetStakeActivationResp)
-
     async def get_supply(self, commitment: Optional[Commitment] = None) -> GetSupplyResp:
         """Returns information about the current supply.
 
@@ -786,18 +789,18 @@ class AsyncClient(_ClientCore):  # pylint: disable=too-many-public-methods
         return await self._provider.make_request(body, GetSupplyResp)
 
     async def get_token_account_balance(
-        self, pubkey: PublicKey, commitment: Optional[Commitment] = None
+        self, pubkey: Pubkey, commitment: Optional[Commitment] = None
     ) -> GetTokenAccountBalanceResp:
         """Returns the token balance of an SPL Token account (UNSTABLE).
 
         Args:
-            pubkey: Pubkey of Token account to query, as base-58 encoded string or PublicKey object.
+            pubkey: Pubkey of Token account to query
             commitment: Bank state to query. It can be either "finalized", "confirmed" or "processed".
 
         Example:
             >>> solana_client = AsyncClient("http://localhost:8899")
-            >>> pubkey = PublicKey("7fUAJdStEuGbc3sM84cKRL6yYaaSstyLSU4ve5oovLS7")
-            >>> (await solana_client.get_token_account_balance(pubkey)).value.amount  # noqa: E501 # pylint: disable=line-too-long # doctest: +SKIP
+            >>> pubkey = Pubkey.from_string("7fUAJdStEuGbc3sM84cKRL6yYaaSstyLSU4ve5oovLS7")
+            >>> (await solana_client.get_token_account_balance(pubkey)).value.amount  # noqa: E501 # doctest: +SKIP
             '9864'
         """
         body = self._get_token_account_balance_body(pubkey, commitment)
@@ -805,7 +808,7 @@ class AsyncClient(_ClientCore):  # pylint: disable=too-many-public-methods
 
     async def get_token_accounts_by_delegate(
         self,
-        delegate: PublicKey,
+        delegate: Pubkey,
         opts: types.TokenAccountOpts,
         commitment: Optional[Commitment] = None,
     ) -> GetTokenAccountsByDelegateResp:
@@ -821,7 +824,7 @@ class AsyncClient(_ClientCore):  # pylint: disable=too-many-public-methods
 
     async def get_token_accounts_by_delegate_json_parsed(
         self,
-        delegate: PublicKey,
+        delegate: Pubkey,
         opts: types.TokenAccountOpts,
         commitment: Optional[Commitment] = None,
     ) -> GetTokenAccountsByDelegateJsonParsedResp:
@@ -837,7 +840,7 @@ class AsyncClient(_ClientCore):  # pylint: disable=too-many-public-methods
 
     async def get_token_accounts_by_owner_json_parsed(
         self,
-        owner: PublicKey,
+        owner: Pubkey,
         opts: types.TokenAccountOpts,
         commitment: Optional[Commitment] = None,
     ) -> GetTokenAccountsByOwnerJsonParsedResp:
@@ -853,7 +856,7 @@ class AsyncClient(_ClientCore):  # pylint: disable=too-many-public-methods
 
     async def get_token_accounts_by_owner(
         self,
-        owner: PublicKey,
+        owner: Pubkey,
         opts: types.TokenAccountOpts,
         commitment: Optional[Commitment] = None,
     ) -> GetTokenAccountsByOwnerResp:
@@ -868,13 +871,13 @@ class AsyncClient(_ClientCore):  # pylint: disable=too-many-public-methods
         return await self._provider.make_request(body, GetTokenAccountsByOwnerResp)
 
     async def get_token_largest_accounts(
-        self, pubkey: PublicKey, commitment: Optional[Commitment] = None
+        self, pubkey: Pubkey, commitment: Optional[Commitment] = None
     ) -> GetTokenLargestAccountsResp:
         """Returns the 20 largest accounts of a particular SPL Token type."""
         body = self._get_token_largest_accounts_body(pubkey, commitment)
         return await self._provider.make_request(body, GetTokenLargestAccountsResp)
 
-    async def get_token_supply(self, pubkey: PublicKey, commitment: Optional[Commitment] = None) -> GetTokenSupplyResp:
+    async def get_token_supply(self, pubkey: Pubkey, commitment: Optional[Commitment] = None) -> GetTokenSupplyResp:
         """Returns the total supply of an SPL Token type."""
         body = self._get_token_supply_body(pubkey, commitment)
         return await self._provider.make_request(body, GetTokenSupplyResp)
@@ -930,7 +933,7 @@ class AsyncClient(_ClientCore):  # pylint: disable=too-many-public-methods
         return await self._provider.make_request(body, GetVoteAccountsResp)
 
     async def request_airdrop(
-        self, pubkey: PublicKey, lamports: int, commitment: Optional[Commitment] = None
+        self, pubkey: Pubkey, lamports: int, commitment: Optional[Commitment] = None
     ) -> RequestAirdropResp:
         """Requests an airdrop of lamports to a Pubkey.
 
@@ -940,9 +943,9 @@ class AsyncClient(_ClientCore):  # pylint: disable=too-many-public-methods
             commitment: Bank state to query. It can be either "finalized", "confirmed" or "processed".
 
         Example:
-            >>> from solana.publickey import PublicKey
+            >>> from solders.pubkey import Pubkey
             >>> solana_client = AsyncClient("http://localhost:8899")
-            >>> (await solana_client.request_airdrop(PublicKey(1), 10000)).value # doctest: +SKIP
+            >>> (await solana_client.request_airdrop(Pubkey([0] * 31 + [1]), 10000)).value # doctest: +SKIP
             Signature(
                 1111111111111111111111111111111111111111111111111111111111111111,
             )
@@ -954,8 +957,7 @@ class AsyncClient(_ClientCore):  # pylint: disable=too-many-public-methods
         """Send a transaction that has already been signed and serialized into the wire format.
 
         Args:
-            txn: Fully-signed Transaction object, a fully sign transaction in wire format,
-                or a fully transaction as base-64 encoded string.
+            txn: Transaction bytes.
             opts: (optional) Transaction options.
 
         Before submitting, the following preflight checks are performed (unless disabled with the `skip_preflight` option):
@@ -991,63 +993,35 @@ class AsyncClient(_ClientCore):  # pylint: disable=too-many-public-methods
 
     async def send_transaction(
         self,
-        txn: Transaction,
-        *signers: Keypair,
+        txn: Union[VersionedTransaction, Transaction],
         opts: Optional[types.TxOpts] = None,
-        recent_blockhash: Optional[Blockhash] = None,
     ) -> SendTransactionResp:
         """Send a transaction.
 
         Args:
-            txn: Transaction object.
-            signers: Signers to sign the transaction.
+            txn: transaction object.
             opts: (optional) Transaction options.
-            recent_blockhash: (optional) Pass a valid recent blockhash here if you want to
-                skip fetching the recent blockhash or relying on the cache.
 
         Example:
-            >>> from solana.keypair import Keypair
-            >>> from solana.system_program import TransferParams, transfer
-            >>> from solana.transaction import Transaction
-            >>> sender, receiver = Keypair.from_seed(bytes(PublicKey(1))), Keypair.from_seed(bytes(PublicKey(2)))
-            >>> txn = Transaction().add(transfer(TransferParams(
-            ...     from_pubkey=sender.public_key, to_pubkey=receiver.public_key, lamports=1000)))
-            >>> solana_client = AsyncClient("http://localhost:8899")
-            >>> (await solana_client.send_transaction(txn, sender)).value # doctest: +SKIP
-            Signature(
-                1111111111111111111111111111111111111111111111111111111111111111,
-            )
-        """
-        last_valid_block_height = None
-        if recent_blockhash is None:
-            if self.blockhash_cache:
-                try:
-                    recent_blockhash = self.blockhash_cache.get()
-                except ValueError:
-                    blockhash_resp = await self.get_latest_blockhash(Finalized)
-                    recent_blockhash = self._process_blockhash_resp(blockhash_resp, used_immediately=True)
-                    last_valid_block_height = blockhash_resp.value.last_valid_block_height
-            else:
-                blockhash_resp = await self.get_latest_blockhash(Finalized)
-                recent_blockhash = self.parse_recent_blockhash(blockhash_resp)
-                last_valid_block_height = blockhash_resp.value.last_valid_block_height
-
-        txn.recent_blockhash = recent_blockhash
-
-        txn.sign(*signers)
-        opts_to_use = (
-            types.TxOpts(preflight_commitment=self._commitment, last_valid_block_height=last_valid_block_height)
-            if opts is None
-            else opts
-        )
-        txn_resp = await self.send_raw_transaction(txn.serialize(), opts=opts_to_use)
-        if self.blockhash_cache:
-            blockhash_resp = await self.get_latest_blockhash(Finalized)
-            self._process_blockhash_resp(blockhash_resp, used_immediately=False)
-        return txn_resp
+            >>> from solders.keypair import Keypair
+            >>> from solders.system_program import TransferParams, transfer
+            >>> from solders.message import Message
+            >>> from solders.transaction import Transaction
+            >>> leading_zeros = [0] * 31
+            >>> sender, receiver = Keypair.from_seed(leading_zeros + [1]), Keypair.from_seed(leading_zeros + [2])
+            >>> ixns = [transfer(TransferParams(
+            ...     from_pubkey=sender.pubkey(), to_pubkey=receiver.pubkey(), lamports=1000))]
+            >>> msg = Message(ixns, sender.pubkey())
+            >>> client = AsyncClient("http://localhost:8899")
+            >>> (await client.send_transaction(Transaction([sender], msg, (await client.get_latest_blockhash()).value.blockhash))) # doctest: +SKIP
+        """  # noqa: E501
+        return await self.send_raw_transaction(bytes(txn), opts=opts)
 
     async def simulate_transaction(
-        self, txn: Transaction, sig_verify: bool = False, commitment: Optional[Commitment] = None
+        self,
+        txn: Union[Transaction, VersionedTransaction],
+        sig_verify: bool = False,
+        commitment: Optional[Commitment] = None,
     ) -> SimulateTransactionResp:
         """Simulate sending a transaction.
 
@@ -1066,10 +1040,10 @@ class AsyncClient(_ClientCore):  # pylint: disable=too-many-public-methods
             ...     '000000000000000000000000000000000000000000839618f701ba7e9ba27ae59825dd6d6bb66d14f6d5d0eae215161d7'
             ...     '1851a106901020200010c0200000040420f0000000000'
             ... )
-            >>> tx = Transaction.deserialize(bytes.fromhex(full_signed_tx_hex))
+            >>> tx = Transaction.from_bytes(bytes.fromhex(full_signed_tx_hex))
             >>> (await solana_client.simulate_transaction(tx)).value.logs  # doctest: +SKIP
             ['BPF program 83astBRguLMdt2h5U1Tpdq5tjFoJ6noeGwaY3mDLVcri success']
-        """  # noqa: E501 # pylint: disable=line-too-long
+        """
         body = self._simulate_transaction_body(txn, sig_verify, commitment)
         return await self._provider.make_request(body, SimulateTransactionResp)
 
@@ -1083,10 +1057,13 @@ class AsyncClient(_ClientCore):  # pylint: disable=too-many-public-methods
             >>> (await solana_client.validator_exit()).value # doctest: +SKIP
             True
         """
-        return await self._provider.make_request(self._validator_exit, ValidatorExitResp)
+        return await self._provider.make_request(self._validator_exit, ValidatorExitResp)  # type: ignore
 
     async def __post_send_with_confirm(
-        self, resp: SendTransactionResp, conf_comm: Commitment, last_valid_block_height: Optional[int]
+        self,
+        resp: SendTransactionResp,
+        conf_comm: Commitment,
+        last_valid_block_height: Optional[int],
     ) -> SendTransactionResp:
         resp = self._post_send(resp)
         sig = resp.value
@@ -1128,7 +1105,7 @@ class AsyncClient(_ClientCore):  # pylint: disable=too-many-public-methods
                 raise TransactionExpiredBlockheightExceededError(f"{tx_sig} has expired: block height exceeded")
             return resp
         else:
-            timeout = time() + 30
+            timeout = time() + 90
             while time() < timeout:
                 resp = await self.get_signature_statuses([tx_sig])
                 resp_value = resp.value[0]

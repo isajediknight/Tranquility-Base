@@ -1,6 +1,5 @@
 """Utils for security.txt."""
 
-
 from dataclasses import dataclass, fields
 from typing import Any, List, Optional
 
@@ -49,7 +48,7 @@ def parse_security_txt(data: bytes) -> SecurityTxt:
     if s_idx == -1:
         raise NoSecurityTxtFoundError("Program doesn't have security.txt section")
 
-    content_arr = data[s_idx + len(HEADER) : e_idx]  # noqa: E203
+    content_arr = data[s_idx + len(HEADER) : e_idx]
     content_da: List[Any] = [[]]
 
     for char in content_arr:
