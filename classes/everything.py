@@ -28,7 +28,7 @@ class CustomString:
     Make strings great again
     """
 
-    def __init__(self,value = ''):
+    def __init__(self,value):
         """
         Initialize with just the string
         """
@@ -40,6 +40,8 @@ class CustomString:
         # Actual padding applied
         self.left_spaces = ""
         self.right_spaces = ""
+
+        self.name = ''
 
         # The string
         self.value = value
@@ -55,12 +57,19 @@ class CustomString:
         self.is_spaced = False
         self.length = len(value)
 
-
-    def define_color(self,name,red,green,blue,text,ansi_1='0',ansi_2='38',ansi_3='2'):
+    def define_color_replace_text(self,name,red,green,blue,text,ansi_1='0',ansi_2='38',ansi_3='2'):
         """
         Sets the color of the text
         """
+        self.name = name
         self.colored = TextColor(name,red,green,blue,text,ansi_1,ansi_2,ansi_3)
+        self.is_colored = True
+
+    def define_color(self,name,red,green,blue,ansi_1='0',ansi_2='38',ansi_3='2'):
+        """
+        Sets the color of the text
+        """
+        self.colored = TextColor(name,red,green,blue,self.value,ansi_1,ansi_2,ansi_3)
         self.is_colored = True
 
     def set_pre_spaces(self,prepend_spaces):
@@ -110,6 +119,169 @@ class CustomString:
         else:
             return self.left_spaces + self.value + self.right_spaces
 
+    def __add__(self,other):
+        """
+        + method
+        """
+
+        if isinstance(other, CustomString):
+            # Concatenate with another MyCustomString instance
+            if(self.is_colored and other.is_colored):
+                return str(self.left_spaces + self.colored.__str__() + self.right_spaces) + str(other.left_spaces + other.colored.__str__() + other.right_spaces)
+            elif(self.is_colored and not other.is_colored):
+                return str(self.left_spaces + self.colored.__str__() + self.right_spaces) + str(other.left_spaces + other.value + other.right_spaces)
+            elif(not self.is_colored and other.is_colored):
+                return str(self.left_spaces + self.value + self.right_spaces) + str(other.left_spaces + other.colored.__str__() + other.right_spaces)
+            else:
+                return str(self.left_spaces + self.value + self.right_spaces) + str(other.left_spaces + other.value + other.right_spaces)
+        elif isinstance(other, str):
+            # Concatenate with a standard string
+            if(self.is_colored):
+                return str(self.left_spaces + self.colored.__str__() + self.right_spaces) + other
+            else:
+                return str(self.left_spaces + self.value + self.right_spaces) + other
+        elif isinstance(other, int):
+            # Concatenate with a standard int
+            if(self.is_colored):
+                return str(self.left_spaces + self.colored.__str__() + self.right_spaces) + str(other)
+            else:
+                return str(self.left_spaces + self.value + self.right_spaces) + str(other)
+        elif isinstance(other, float):
+            # Concatenate with a standard float
+            if(self.is_colored):
+                return str(self.left_spaces + self.colored.__str__() + self.right_spaces) + str(other)
+            else:
+                return str(self.left_spaces + self.value + self.right_spaces) + str(other)
+        elif isinstance(other, list):
+            # Concatenate with a standard float
+            if(self.is_colored):
+                temp = "[ "
+                for i in other:
+                    temp += str(i) + ", "
+                temp = temp[:-2]
+                temp += " ]"
+                return str(self.left_spaces + self.colored.__str__() + self.right_spaces) + temp
+            else:
+                return str(self.left_spaces + self.value + self.right_spaces) + str(other)
+        elif isinstance(other, tuple):
+            # Concatenate with a standard float
+            if(self.is_colored):
+                temp = "( "
+                for i in other:
+                    temp += str(i) + ", "
+                temp = temp[:-2]
+                temp += " )"
+                return str(self.left_spaces + self.colored.__str__() + self.right_spaces) + temp
+            else:
+                return str(self.left_spaces + self.value + self.right_spaces) + str(other)
+        elif isinstance(other, set):
+            # Concatenate with a standard float
+            if(self.is_colored):
+                temp = "[ "
+                other = list(other)
+                for i in other:
+                    temp += str(i) + ", "
+                temp = temp[:-2]
+                temp += " ]"
+                return str(self.left_spaces + self.colored.__str__() + self.right_spaces) + temp
+            else:
+                return str(self.left_spaces + self.value + self.right_spaces) + str(other)
+        elif isinstance(other, dict):
+            # Concatenate with a standard float
+            if(self.is_colored):
+                temp = "{"
+                for key in list(other.keys()):
+                    temp += " [" +str(key)+":"+str(other[key]) + "],"
+                temp = temp[:-2]
+                temp += "] }"
+                return str(self.left_spaces + self.colored.__str__() + self.right_spaces) + temp
+            else:
+                return str(self.left_spaces + self.value + self.right_spaces) + str(other)
+        else:
+            # Handle other types or raise an error
+            return NotImplemented  # Indicate that this operation is not supported
+
+    def __radd__(self,other):
+        """
+        + method
+        """
+        if isinstance(other, CustomString):
+            # Concatenate with another MyCustomString instance
+            if(self.is_colored and other.is_colored):
+                return str(other.left_spaces + other.colored.__str__() + other.right_spaces) + str(self.left_spaces + self.colored.__str__() + self.right_spaces)
+            elif(self.is_colored and not other.is_colored):
+                return str(other.left_spaces + other.value + other.right_spaces) + str(self.left_spaces + self.colored.__str__() + self.right_spaces)
+            elif(not self.is_colored and other.is_colored):
+                return str(other.left_spaces + other.colored.__str__() + other.right_spaces) + str(self.left_spaces + self.value + self.right_spaces)
+            else:
+                return str(other.left_spaces + other.value + other.right_spaces) + str(self.left_spaces + self.value + self.right_spaces)
+        elif isinstance(other, str):
+            # Concatenate with a standard string
+            if(self.is_colored):
+                return other + str(self.left_spaces + self.colored.__str__() + self.right_spaces)
+            else:
+                return other + str(self.left_spaces + self.value + self.right_spaces)
+        elif isinstance(other, int):
+            # Concatenate with a standard int
+            if(self.is_colored):
+                return str(other) + str(self.left_spaces + self.colored.__str__() + self.right_spaces)
+            else:
+                return str(other) + str(self.left_spaces + self.value + self.right_spaces)
+        elif isinstance(other, float):
+            # Concatenate with a standard float
+            if(self.is_colored):
+                return str(other) + str(self.left_spaces + self.colored.__str__() + self.right_spaces)
+            else:
+                return str(other) + str(self.left_spaces + self.value + self.right_spaces)
+        elif isinstance(other, list):
+            # Concatenate with a standard float
+            temp = "[ "
+            for i in other:
+                temp += str(i) + ", "
+            temp = temp[:-2]
+            temp += " ]"
+            if(self.is_colored):
+                return temp + str(self.left_spaces + self.colored.__str__() + self.right_spaces)
+            else:
+                return str(other) + str(self.left_spaces + self.value + self.right_spaces)
+        elif isinstance(other, tuple):
+            # Concatenate with a standard float
+            temp = "( "
+            for i in other:
+                temp += str(i) + ", "
+            temp = temp[:-2]
+            temp += " )"
+            if(self.is_colored):
+                return temp + str(self.left_spaces + self.colored.__str__() + self.right_spaces)
+            else:
+                return str(other) + str(self.left_spaces + self.value + self.right_spaces)
+        elif isinstance(other, set):
+            # Concatenate with a standard float
+            temp = "[ "
+            other = list(other)
+            for i in other:
+                temp += str(i) + ", "
+            temp = temp[:-2]
+            temp += " ]"
+            if(self.is_colored):
+                return temp + str(self.left_spaces + self.colored.__str__() + self.right_spaces)
+            else:
+                return str(other) + str(self.left_spaces + self.value + self.right_spaces)
+        elif isinstance(other, dict):
+            # Concatenate with a standard float
+            temp = "{"
+            for key in list(other.keys()):
+                temp += " [" +str(key)+":"+str(other[key]) + "],"
+            temp = temp[:-2]
+            temp += "] }"
+            if(self.is_colored):
+                return temp + str(self.left_spaces + self.colored.__str__() + self.right_spaces)
+            else:
+                return str(other) + str(self.left_spaces + self.value + self.right_spaces)
+        else:
+            # Handle other types or raise an error
+            return NotImplemented  # Indicate that this operation is not supported
+
     def __repr__(self):
         """
         for debugging
@@ -118,6 +290,29 @@ class CustomString:
             return f'CustomString(\'{self.left_spaces}\', \'{self.colored}\', \'{self.right_spaces}\')'
         else:
             return self.left_spaces + self.value + self.right_spaces
+
+    def debug(self):
+        """
+        Print Info
+        """
+        output = self.c()+"\t"
+        red_color = CustomString('Red')
+        red_color.define_color('red',self.colored.red,0,0)
+        red_number = CustomString(str(self.colored.red))
+        red_number.set_pre_spaces(3)
+        red_number.fix_spacing()
+        green_color = CustomString('Green')
+        green_color.define_color('green',0,self.colored.green,0)
+        green_number = CustomString(str(self.colored.green))
+        green_number.set_pre_spaces(3)
+        green_number.fix_spacing()
+        blue_color = CustomString('Blue')
+        blue_color.define_color('blue',0,0,self.colored.blue)
+        blue_number = CustomString(str(self.colored.green))
+        blue_number.set_pre_spaces(3)
+        blue_number.fix_spacing()
+        output += red_color.c()+" "+red_number.c()+"\t"+green_color.c()+" "+green_number.c()+" "+blue_color.c()+" "+blue_number.c()
+        print(output)
 
 class TextColor:
     """
